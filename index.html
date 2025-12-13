@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICB Formulary Finder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+    <div class="max-w-2xl mx-auto pt-12">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">ICB Formulary Finder</h1>
+            <p class="text-gray-600 mb-6">Enter a UK postcode to find the NHS ICB and its formulary website</p>
+
+            <div class="mb-6">
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        id="postcodeInput"
+                        placeholder="e.g. SW1A 1AA"
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    />
+                    <button
+                        id="searchBtn"
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                        Search
+                    </button>
+                </div>
+            </div>
+
+            <div id="errorDiv" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p class="text-red-800 font-medium">Error</p>
+                <p id="errorMsg" class="text-red-700 text-sm"></p>
+            </div>
+
+            <div id="resultDiv" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
+                <div>
+                    <p class="text-sm text-gray-600">Postcode</p>
+                    <p id="resultPostcode" class="text-lg font-semibold text-gray-800"></p>
+                </div>
+
+                <div>
+                    <p class="text-sm text-gray-600">District</p>
+                    <p id="resultDistrict" class="text-lg font-semibold text-gray-800"></p>
+                </div>
+
+                <div>
+                    <p class="text-sm text-gray-600">Integrated Care Board (ICB)</p>
+                    <p id="resultIcbName" class="text-lg font-semibold text-gray-800"></p>
+                    <p id="resultIcbCode" class="text-sm text-gray-500"></p>
+                </div>
+
+                <div id="formularyDiv" class="pt-4 border-t border-blue-300"></div>
+            </div>
+        </div>
+
+        <div class="mt-6 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Coverage Status</h2>
+            <p class="text-sm text-gray-600 mb-3">Currently mapped: <strong id="mappedCount"></strong></p>
+            <details class="text-sm text-gray-600">
+                <summary class="cursor-pointer font-medium text-blue-600 hover:text-blue-700">View mapped ICBs</summary>
+                <ul id="mappedList" class="mt-2 space-y-1 pl-4"></ul>
+            </details>
+        </div>
+
+        <div class="mt-4 text-center text-sm text-gray-600">
+            <p>Data from <a href="https://postcodes.io" class="text-blue-600 hover:underline" target="_blank">postcodes.io</a></p>
+            <p class="mt-1">Based on <a href="https://stephenkeable.github.io/ccg-lookup/" class="text-blue-600 hover:underline" target="_blank">Stephen Keable CCG Lookup</a></p>
+        </div>
+    </div>
+
+    <script>
+        var formularyMapping = {
+            "NHS Hampshire and Isle of Wight": "https://www.hiowformulary.nhs.uk/",
+            "NHS Suffolk and North East Essex": "https://www.ipswichandeastsuffolkformulary.nhs.uk/",
+            "NHS Buckinghamshire, Oxfordshire and Berkshire West": "https://www.bucksformulary.nhs.uk/",
+            "NHS Cambridgeshire and Peterborough": "https://www.cambridgeshireandpeterboroughformulary.nhs.uk/",
+            "NHS Birmingham and Solihull": "https://www.birminghamandsurroundsformulary.nhs.uk/",
+            "NHS North East London": "https://nel-jointformulary.nhs.uk/",
+            "NHS Bedfordshire, Luton and Milton Keynes": "https://www.formularymk.nhs.uk/",
+            "NHS Norfolk and Waveney": "https://www.norfolkandwaveneyformulary.nhs.uk/",
+            "NHS Devon": "https://southwest.devonformularyguidance.nhs.uk/",
+            "NHS Kent and Medway": "https://www.kentformulary.nhs.uk/",
+            "NHS North East and North Cumbria": "https://www.northeastnorthcumbriaformulary.nhs.uk/",
+            "NHS Lancashire and South Cumbria": "https://www.lancashireandsouthcumbriammg.nhs.uk/",
+            "NHS Staffordshire and Stoke-on-Trent": "https://www.staffordshireandstokeontrentformulary.nhs.uk/",
+            "NHS South West London": "http://swljointmedicinesformulary.nhs.uk/",
+            "NHS South East London": "https://www.selondonjointmedicinesformulary.nhs.uk/",
+            "NHS North Central London": "https://ncl-jointformulary.nhs.uk/",
+            "NHS Greater Manchester": "https://www.greatermanchesterformulary.nhs.uk/",
+            "NHS Cheshire and Merseyside": "https://www.cheshireandmerseysideformulary.nhs.uk/",
+            "NHS Coventry and Warwickshire": "https://www.covwarkformulary.nhs.uk/",
+            "NHS Humber and North Yorkshire": "https://www.apcnlgformulary.nhs.uk/",
+            "NHS Lincolnshire": "https://www.lincolnshirejointformulary.nhs.uk/",
+            "NHS Nottingham and Nottinghamshire": "https://www.nottinghamshireformulary.nhs.uk/",
+            "NHS Northamptonshire": "https://www.northamptonformulary.nhs.uk/",
+            "NHS West Yorkshire": "https://www.wyicsapc.co.uk/",
+            "NHS South Yorkshire": "https://mpd.doncasterccg.nhs.uk/",
+            "NHS Black Country": "https://www.blackcountryformulary.nhs.uk/",
+            "NHS Frimley": "https://www.frimleyhealthformulary.nhs.uk/",
+            "NHS Sussex": "https://www.sussexformulary.nhs.uk/",
+            "NHS Somerset": "https://formulary.nhssomerset.nhs.uk/",
+            "NHS Bristol, North Somerset and South Gloucestershire": "https://remedy.bnssg.icb.nhs.uk/formulary-adult/"
+        };
+
+        var input = document.getElementById("postcodeInput");
+        var searchBtn = document.getElementById("searchBtn");
+        var errorDiv = document.getElementById("errorDiv");
+        var errorMsg = document.getElementById("errorMsg");
+        var resultDiv = document.getElementById("resultDiv");
+        var mappedCount = document.getElementById("mappedCount");
+        var mappedList = document.getElementById("mappedList");
+
+        mappedCount.textContent = Object.keys(formularyMapping).length + " ICBs";
+        
+        var sortedIcbs = Object.keys(formularyMapping).sort();
+        for (var i = 0; i < sortedIcbs.length; i++) {
+            var li = document.createElement("li");
+            li.className = "list-disc";
+            li.textContent = sortedIcbs[i];
+            mappedList.appendChild(li);
+        }
+
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorDiv.classList.remove("hidden");
+        }
+
+        function searchPostcode() {
+            var postcode = input.value.trim().toUpperCase();
+            
+            if (!postcode) {
+                showError("Please enter a postcode");
+                return;
+            }
+
+            searchBtn.disabled = true;
+            searchBtn.textContent = "Searching...";
+            errorDiv.classList.add("hidden");
+            resultDiv.classList.add("hidden");
+
+            var cleanPostcode = postcode.replace(/\s+/g, "");
+            
+            fetch("https://api.postcodes.io/postcodes/" + cleanPostcode)
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (!data.result || data.status !== 200) {
+                        throw new Error("Invalid postcode - please check and try again");
+                    }
+
+                    var icbName = data.result.ccg || "Unknown ICB";
+                    var icbCode = null;
+                    if (data.result.codes && data.result.codes.ccg) {
+                        icbCode = data.result.codes.ccg;
+                    }
+                    var formularyUrl = formularyMapping[icbName] || null;
+
+                    document.getElementById("resultPostcode").textContent = data.result.postcode;
+                    document.getElementById("resultDistrict").textContent = data.result.admin_district || "Unknown";
+                    document.getElementById("resultIcbName").textContent = icbName;
+                    document.getElementById("resultIcbCode").textContent = icbCode ? "Code: " + icbCode : "";
+
+                    var formularyDiv = document.getElementById("formularyDiv");
+                    if (formularyUrl) {
+                        formularyDiv.innerHTML = "<p class=\"text-sm text-gray-600 mb-2\">Formulary Website</p>" +
+                            "<a href=\"" + formularyUrl + "\" target=\"_blank\" rel=\"noopener noreferrer\" " +
+                            "class=\"inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors\">" +
+                            "Open " + icbName + " Formulary →</a>";
+                    } else {
+                        formularyDiv.innerHTML = "<div class=\"bg-yellow-50 border border-yellow-200 rounded-lg p-4\">" +
+                            "<p class=\"text-yellow-800 text-sm\"><strong>Formulary URL not yet mapped</strong><br>" +
+                            "We don't have the formulary URL for this ICB yet. You can help by searching for \"" + 
+                            icbName + " formulary\" online.</p></div>";
+                    }
+
+                    resultDiv.classList.remove("hidden");
+                })
+                .catch(function(err) {
+                    showError(err.message || "Failed to lookup postcode. Please try again.");
+                })
+                .finally(function() {
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = "Search";
+                });
+        }
+
+        searchBtn.addEventListener("click", searchPostcode);
+        
+        input.addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                searchPostcode();
+            }
+        });
+        
+        input.addEventListener("input", function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+    </script>
+</body>
+</html>
