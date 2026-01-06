@@ -134,6 +134,24 @@
             mappedList.appendChild(li);
         }
 
+        function getUrlParameter(name) {
+            var results = new RegExp('[?&]' + name + '=([^&#]*)').exec(window.location.href);
+            return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
+        }
+
+        function updateUrl(postcode) {
+            var newUrl = window.location.pathname + '?postcode=' + encodeURIComponent(postcode);
+            window.history.pushState({postcode: postcode}, '', newUrl);
+        }
+
+        function loadFromUrl() {
+            var urlPostcode = getUrlParameter('postcode');
+            if (urlPostcode) {
+                input.value = urlPostcode.toUpperCase();
+                searchPostcode();
+            }
+        }
+
         function showError(message) {
             errorMsg.textContent = message;
             errorDiv.classList.remove("hidden");
@@ -147,6 +165,7 @@
                 return;
             }
 
+            updateUrl(postcode);
             searchBtn.disabled = true;
             searchBtn.textContent = "Searching...";
             errorDiv.classList.add("hidden");
@@ -210,6 +229,8 @@
         input.addEventListener("input", function(e) {
             e.target.value = e.target.value.toUpperCase();
         });
+
+        loadFromUrl();
     </script>
 </body>
 </html>
